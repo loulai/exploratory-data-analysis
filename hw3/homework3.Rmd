@@ -1,0 +1,46 @@
+---
+title: "homework3"
+author: "Louise Lai"
+date: "August 2, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+library("dplyr")
+library("magrittr")
+```
+
+# Question 1
+```{r}
+betaPDFs <- c()
+
+alphas <- c(0.5, 5, 1, 2, 2)
+betas <- c(0.5, 1, 3, 2, 5)
+
+generateBetaPDFs <- function(alphaArray, betaArray){
+  betaDistributions <- c()
+  for(i in 1:5){
+    a <- alphaArray[i]
+    b <- betaArray[i]
+    betaDistributions[[i]] <- rbeta(1000, a, b)
+  }
+  return(betaDistributions)
+}
+
+betaPDFs <- as.data.frame(generateBetaPDFs(alphas, betas))
+
+# ! come back to refactor, so that the colors are distributed by palette # betaPDFs <- as.data.frame(t(betaPDFs))
+ggplot() + geom_freqpoly(aes(betaPDFs[[1]])) +
+  geom_freqpoly(aes(betaPDFs[[2]], color="red")) +
+  geom_freqpoly(aes(betaPDFs[[3]], color="orange")) +
+  geom_freqpoly(aes(betaPDFs[[4]], color="yellow")) +
+  geom_freqpoly(aes(betaPDFs[[5]], color="blue")) +
+  theme(text=element_text(family="Comic Sans MS"))
+```
+
+```{r, echo=T}
+
+```
+

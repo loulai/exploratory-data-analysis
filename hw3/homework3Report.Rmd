@@ -1,0 +1,149 @@
+---
+title: "Traffic Exploration"
+author: "Louise Lai"
+date: "August 4, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+install.packages("tidyverse")
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+library(magrittr)
+library(forcats)
+```
+
+
+
+```{r}
+setwd()
+original <- as.data.frame(read.csv("~/Desktop/programming/eda/homework/hw3/Officer_Traffic_Stops.csv", na.strings = c("", " ", "  ", "NA"))) 
+df <-  original
+
+##### Data Cleaning
+
+# count NAs
+anyNA(df) # TRUE
+colnames(df)[apply(df, 2, anyNA)] # returns colnames that have NAs 
+
+## NAs
+df$Officer_Race <- as.character(df$Officer_Race)
+df %<>% mutate(Officer_Race = replace(Officer_Race, is.na(Officer_Race), "Missing")) # replace
+df$Officer_Race <- as.factor(df$Officer_Race)
+
+# unsure what to do with CMPD_Division NAs yet!
+
+## Dates
+df$Month_of_Stop <- parse_date(df$Month_of_Stop, "%Y/%m")
+
+## Logicals
+levels(df$Was_a_Search_Conducted)
+levels(df$Was_a_Search_Conducted) <- c(FALSE, TRUE) # set 'No' to FALSE, 'Yes' to TRUE
+df$Was_a_Search_Conducted <- as.logical(df$Was_a_Search_Conducted)
+
+## Order Factors
+levels(df$Result_of_Stop)
+
+# Change White/Hispanic 
+df %>% 
+  filter(Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
+  nrow() # There are 6,623 drivers that are White and Hispanic 
+
+df %>% 
+  filter(Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
+  nrow() # There are 6,623 drivers that are White and Hispanic 
+
+df$Driver_Race <- as.character(df$Driver_Race)
+df %<>% 
+  filter(!Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
+  mutate(Driver_Race = replace(Driver_Race, TRUE, "White Hispanic")) # replace White (race) && Hispanic (ethnicity) to just 'White Hispanic' (race)
+df$Driver_Race <- as.character(df$Driver_Race)
+
+```
+
+```{r}
+# Data Exploration
+glimpse(df) # 79884 observations, 17 variables
+
+df %>% 
+  count(Officer_Race)
+
+df %>% 
+  mutate(Officer_Race = Officer_Race %>% fct_infreq() %>% fct_rev()) %>% 
+  ggplot(aes(Officer_Race)) +
+  geom_bar() + theme(axis.text.x=element_text(angle=50, hjust=1)) + labs(title="Count of Officers")
+
+# we see that it's mostly white officers, by a large amount. Come back and see percentages.
+```
+
+```{r}
+# Given that some legal action resulted, how many of those arrested are of each ethnicity?
+totalStops <- nrow(df) # 79,884
+totalLegalActions <- df %>% filter(Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% nrow() # 34,506
+totalLegalActions/totalStops # 43% of stops result in a legal action
+
+legalActiondf <- df %>% filter(Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest")
+
+df2 <- legalActiondf %>% 
+  group_by(Driver_Race) %>% 
+  summarize(ethnicityArrestedPercent = 100 * n()/totalLegalActions) %>% 
+  arrange(desc(ethnicityArrestedPercent)) # black = 53%, White 42%
+
+df2
+
+pie <- df2 %>% 
+  mutate(ethnicityArrestedPercent = ethnicityArrestedPercent) %>% 
+  ggplot(aes(x="", y=ethnicityArrestedPercent, fill=Driver_Race)) +
+  geom_bar(width=1, stat="identity") + 
+  coord_polar("y", start=0) +
+  labs(title="Given arrested, what is their ethnicity?", xlab="", ylab="") +
+  geom_text(aes(y = ethnicityArrestedPercent/5 + c(0, cumsum(ethnicityArrestedPercent)[-length(ethnicityArrestedPercent)]), 
+            label = percent(ethnicityArrestedPercent/100)), size=3)+ 
+  scale_fill_brewer()
+
+pie
+
+# Wow. Now, let's say you've been stopped. Given that you're X race, 
+# are you more or less likely to be arrested?
+
+# create a legal action column and select only relevant columns
+legalActiondf <- df %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  select(-1, -5, -7, -12, -13, -14, -15, -16, -17)
+
+likelihood_to_be_arrested_given_race <- legalActiondf %>% 
+  group_by(Driver_Race) %>% 
+  summarize(percent_legal_action_taken = 100 * sum(legalAction == T)/n()) %>% 
+  ungroup() %>% 
+  arrange(desc(percent_legal_action_taken))
+
+likelihood_to_be_arrested_given_race
+likelihood_to_be_arrested_given_race
+pie2 <- df2 %>% 
+  mutate(ethnicityArrestedPercent = ethnicityArrestedPercent) %>% 
+  group_by(ethnicityArrestedPercent) 
+pie2
+# Given ethnicity, how likely are you to be stopped?
+
+# Do these correspond?
+```
+
+
+```{r}
+# Do officers have a biases towards other ethnicities?
+colnames(df)
+levels(df$Driver_Race)
+df %>% 
+  filter(Officer_Race == "White") %>% 
+  summarize()
+
+# What percent of stops of people actually lead to an arrest?
+
+# - Break down above by race
+
+```
+
+

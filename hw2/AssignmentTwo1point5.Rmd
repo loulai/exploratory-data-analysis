@@ -1,0 +1,89 @@
+---
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Q2
+
+Trying to load all 28 CSV documents kept crashing my (rather frail) Lenovo computer - I apologize for not getting this to work, my Macbook Pro is on the way!
+
+\newpage
+# Q3
+```{r, echo=F, eval=T}
+setwd("/home/louiselai88gmail/Desktop/programming/eda/homework/hw2")
+heartAttack_1 <- read.csv("./data/heart-attack.csv", stringsAsFactors = T)
+heartAttack_2 <- read.csv("./data/heart-attack.csv", stringsAsFactors = F)
+heartAttack_3 <- read.csv("./data/heart-attack.csv")
+
+str(heartAttack_1)
+str(heartAttack_2)
+str(heartAttack_3)
+```
+
+```{r}
+levels(heartAttack_1$work_type)
+
+# min(heartAttack_1$work_type) # not ordered
+
+barplot(table(heartAttack_1$work_type))
+
+heartAttack_1$work_type <- ordered(heartAttack_1$work_type)
+
+barplot(table(heartAttack_1$work_type))
+
+barplot(table(heartAttack_1$gender)) # there are spelling differences that create 5 factors instead of 3
+
+heartAttack_1$gender[heartAttack_1$gender == "Male"] <- "male"
+
+barplot(table(heartAttack_1$gender)) # the factor still exists, even though there are 0 observations in it
+
+heartAttack_1$gender[heartAttack_1$gender == "Female"] <- "female"
+
+table(droplevels(heartAttack_1)$gender)
+
+```
+
+\newpage
+# Q4
+Create a vector of 10,000 random variates $\sim \mathcal{U}\{10^{-15},10^{5}\}$. These numbers represent wavelengths (in meters) of photons hitting the Hubble telescope. 
+```{r}
+wavelengthsNums <- exp(runif(10000,log(1e-15),log(1e5)))
+wavelengths <- exp(runif(10000,log(1e-15),log(1e5)))
+```
+
+- Convert this vector into an ordinal factor with levels as the type of wave. Levels should be ordered in terms of increasing wavelength. 
+```{r}
+library("ggplot2")
+gamma <- 1e-11
+xray <- 10e-8
+uv <- 4 * 10e-7
+visible <- 7.5 * 10e-7
+infrared <- 10e-6
+microwave <- 10e-3
+radio <- 10e3
+
+frequencies <- c(gamma, xray, uv, visible, infrared, microwave, radio)
+
+wavelengths <- cut(wavelengths,
+                   breaks=c(-Inf, gamma, xray, uv, visible, infrared, microwave, radio, Inf),
+                   ordered_result = TRUE,
+                   right=TRUE,
+                   labels=c("gamma", "xray", "uv", "visible", "infrared", "microwave", "radio", "beyondRadio")
+                   )
+```
+
+ - Create a boxplot for each factor level.
+```{r}
+ggplot(data.frame(wavelengths, wavelengthsNums), aes(x=wavelengths, y=log(wavelengthsNums), fill=wavelengths))+
+  geom_boxplot() +
+  labs(title="Plot of Wavelengths and Log Wavelength ")
+```
+ 
+ - How many photons can you see with the the naked eye?
+```{r}
+10000 * ((visible-uv)/(10e5-10e-15))
+```
+ 
+ 
