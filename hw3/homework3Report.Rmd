@@ -7,74 +7,102 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-install.packages("tidyverse")
 library(dplyr)
 library(tidyr)
 library(readr)
 library(lubridate)
 library(magrittr)
 library(forcats)
+library(ggplot2)
+library(scales)
 ```
 
 
 
 ```{r}
-setwd()
-original <- as.data.frame(read.csv("~/Desktop/programming/eda/homework/hw3/Officer_Traffic_Stops.csv", na.strings = c("", " ", "  ", "NA"))) 
+setwd("~/Desktop/programming/eda/homework/hw3")
+original <- as.data.frame(read.csv("./Officer_Traffic_Stops.csv", na.strings = c("", " ", "  ", "NA"))) 
 df <-  original
 
 ##### Data Cleaning
 
-# count NAs
-anyNA(df) # TRUE
-colnames(df)[apply(df, 2, anyNA)] # returns colnames that have NAs 
+returnCleanData <- function(){
+  
+  # count NAs
+  anyNA(df) # TRUE
+  colnames(df)[apply(df, 2, anyNA)] # returns colnames that have NAs 
+  
+  ## NAs
+  df$Officer_Race <- as.character(df$Officer_Race)
+  df %<>% mutate(Officer_Race = replace(Officer_Race, is.na(Officer_Race), "Missing")) # replace
+  df$Officer_Race <- as.factor(df$Officer_Race)
+  
+  # unsure what to do with CMPD_Division NAs yet!
+  
+  ## Dates
+  df$Month_of_Stop <- parse_date(df$Month_of_Stop, "%Y/%m")
+  
+  ## Logicals
+  levels(df$Was_a_Search_Conducted)
+  levels(df$Was_a_Search_Conducted) <- c(FALSE, TRUE) # set 'No' to FALSE, 'Yes' to TRUE
+  df$Was_a_Search_Conducted <- as.logical(df$Was_a_Search_Conducted)
+  
+  ## Order Factors
+  levels(df$Result_of_Stop) # come back~ <<
+  
+  # Change White/Hispanic 
+  df %>% 
+    filter(Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
+    nrow() # There are 6,623 drivers that are White and Hispanic 
+  
+  df %>% 
+    filter(Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
+    nrow() # There are 6,623 drivers that are White and Hispanic 
+  
+  df$Driver_Race <- as.character(df$Driver_Race)
+  df %<>%
+    mutate(Driver_Race = replace(Driver_Race, !Driver_Race == "White" & Driver_Ethnicity == "Hispanic", "White Hispanic")) # replace White (race) && Hispanic (ethnicity) to just 'White Hispanic' (race)
+  
+  # Filter truly unnecessary columns
+  df %<>% 
+    select(-13, -14, -15, -16, -17)
+  
+  return(df)
+}
 
-## NAs
-df$Officer_Race <- as.character(df$Officer_Race)
-df %<>% mutate(Officer_Race = replace(Officer_Race, is.na(Officer_Race), "Missing")) # replace
-df$Officer_Race <- as.factor(df$Officer_Race)
-
-# unsure what to do with CMPD_Division NAs yet!
-
-## Dates
-df$Month_of_Stop <- parse_date(df$Month_of_Stop, "%Y/%m")
-
-## Logicals
-levels(df$Was_a_Search_Conducted)
-levels(df$Was_a_Search_Conducted) <- c(FALSE, TRUE) # set 'No' to FALSE, 'Yes' to TRUE
-df$Was_a_Search_Conducted <- as.logical(df$Was_a_Search_Conducted)
-
-## Order Factors
-levels(df$Result_of_Stop)
-
-# Change White/Hispanic 
-df %>% 
-  filter(Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
-  nrow() # There are 6,623 drivers that are White and Hispanic 
-
-df %>% 
-  filter(Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
-  nrow() # There are 6,623 drivers that are White and Hispanic 
-
-df$Driver_Race <- as.character(df$Driver_Race)
-df %<>% 
-  filter(!Driver_Race == "White" & Driver_Ethnicity == "Hispanic") %>% 
-  mutate(Driver_Race = replace(Driver_Race, TRUE, "White Hispanic")) # replace White (race) && Hispanic (ethnicity) to just 'White Hispanic' (race)
-df$Driver_Race <- as.character(df$Driver_Race)
+df <- returnCleanData()
 
 ```
 
 ```{r}
 # Data Exploration
-glimpse(df) # 79884 observations, 17 variables
+glimpse(df) # 79884 observations, 12 variables
+
+# How many officers, by race
+df %>% 
+  count(Officer_Race) %>% 
+  arrange(desc(n))
 
 df %>% 
-  count(Officer_Race)
-
-df %>% 
-  mutate(Officer_Race = Officer_Race %>% fct_infreq() %>% fct_rev()) %>% 
+  mutate(Officer_Race = Officer_Race %>% fct_infreq()) %>% 
   ggplot(aes(Officer_Race)) +
-  geom_bar() + theme(axis.text.x=element_text(angle=50, hjust=1)) + labs(title="Count of Officers")
+  geom_bar() +
+  xlab("Race of the Officer") +
+  ylab("Number of Officers") +
+  labs(title="Count of Officers by Race") +
+  scale_y_continuous(breaks=seq(0, 60000, 10000), labels=comma_format()) +
+  theme_classic() +
+  theme(
+    axis.text.x=element_text(angle=60, hjust=1),
+    panel.background = element_rect(fill="lightblue"),
+    panel.grid.minor = element_line(size=0.25, linetype='solid',
+                                    color='white'),
+    text=element_text(family="Helvetica"))
+
+# How many drivers stopped, by race
+df %>% 
+  count(Driver_Race) %>% 
+  arrange(desc(n))
 
 # we see that it's mostly white officers, by a large amount. Come back and see percentages.
 ```
