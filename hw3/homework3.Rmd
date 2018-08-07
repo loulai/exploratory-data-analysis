@@ -7,39 +7,123 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library("ggplot2")
-library("dplyr")
-library("magrittr")
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(zoo)
 ```
 
 # Question 1
+# 1.1
 ```{r}
-betaPDFs <- c()
 
+# generate initial dataframe, arranged by smallest xval first
+PDFs <- as.data.frame(runif(100, 0.0, 1.0))
+colnames(PDFs) <- "xValue"
+PDFs %<>% 
+  arrange(xValue)
+  
+# store given alphas and betas
 alphas <- c(0.5, 5, 1, 2, 2)
 betas <- c(0.5, 1, 3, 2, 5)
 
-generateBetaPDFs <- function(alphaArray, betaArray){
-  betaDistributions <- c()
+# start filling DF!
+generatePDFs <- function(df, alphaArray, betaArray){
+  
+  # loop through all 5 given alphas/betas
   for(i in 1:5){
     a <- alphaArray[i]
     b <- betaArray[i]
-    betaDistributions[[i]] <- rbeta(1000, a, b)
+    
+    # extract x values
+    xVals <- df$xValue
+    betaDistribution <- c()
+    
+    # start filling the distribution vector
+    for(k in 1:length(xVals)){
+       betaDistribution[k] <- dbeta(xVals[k], a, b)
+    }
+    
+    # convert distribution vector into df column
+    df[[i+1]] <- betaDistribution
   }
-  return(betaDistributions)
+  names(df) <-  c("xValue", "B1", "B2", "B3", "B4", "B5")
+  return(df)
 }
 
-betaPDFs <- as.data.frame(generateBetaPDFs(alphas, betas))
+PDFs <- generatePDFs(PDFs, alphas, betas)
 
-# ! come back to refactor, so that the colors are distributed by palette # betaPDFs <- as.data.frame(t(betaPDFs))
-ggplot() + geom_freqpoly(aes(betaPDFs[[1]])) +
-  geom_freqpoly(aes(betaPDFs[[2]], color="red")) +
-  geom_freqpoly(aes(betaPDFs[[3]], color="orange")) +
-  geom_freqpoly(aes(betaPDFs[[4]], color="yellow")) +
-  geom_freqpoly(aes(betaPDFs[[5]], color="blue")) +
-  theme(text=element_text(family="Comic Sans MS"))
+PDFs %>% 
+  ggplot( aes(x=xValue)) +
+    geom_line(aes(y=B1, color='1')) + 
+    geom_line(aes(y=B2, color='2')) +
+    geom_line(aes(y=B3, color='3')) + 
+    geom_line(aes(y=B4, color='4'))+ 
+    geom_line(aes(y=B5, color='5')) +
+    scale_color_discrete(name="", labels=c(bquote(alpha==0.5~","~beta==0.5),
+                                           bquote(alpha==5~","~beta==1),
+                                           bquote(alpha==1~","~beta==3),
+                                           bquote(alpha==2~","~beta==3),
+                                           bquote(alpha==2~","~beta==5))) + 
+  xlab("x-value") + 
+  ylab("Density Function Value") +
+  labs(caption="Beta Distributions with Given Alpha and Beta")
 ```
 
+# 1.2
+```{r}
+
+generateCDFs <- function(df, alphaArray, betaArray){
+  
+  # loop through all 5 given alphas/betas
+  for(i in 1:5){
+    a <- alphaArray[i]
+    b <- betaArray[i]
+    
+    # extract x values
+    xVals <- df$xValue
+    betaCumulative <- c()
+    
+    # start filling the cumulative vector
+    for(k in 1:length(xVals)){
+       betaCumulative[k] <- qbeta(xVals[k], a, b)
+    }
+    
+    # convert distribution vector into df column
+    df[[i+5+1]] <- betaCumulative
+  }
+  
+  names(df) <-  c("xValue", "B1", "B2", "B3", "B4", "B5",
+                  "BC1", "BC2", "BC3", "BC4", "BC5")
+  return(df)
+}
+
+PDFCDF <- generateCDFs(PDFs, alphas, betas)
+
+ggplot(data=PDFCDF, aes(x=xValue)) +
+  geom_area(aes(y=BC1, color="1", fill="1"), alpha=0.15) +
+  geom_area(aes(y=BC2, color="2", fill="2"), alpha=0.15) +
+  geom_area(aes(y=BC3, color= "3", fill="3"), alpha=0.15) +
+  geom_area(aes(y=BC4, color ="4", fill="4"), alpha=0.15) +
+  geom_area(aes(y=BC5, color = "5", fill="5"), alpha=0.15) +
+  scale_color_discrete(name="", labels=c(bquote(alpha==0.5~","~beta==0.5),
+                                         bquote(alpha==5~","~beta==1),
+                                         bquote(alpha==1~","~beta==3),
+                                         bquote(alpha==2~","~beta==3),
+                                         bquote(alpha==2~","~beta==5))) + 
+  scale_fill_discrete(guide=FALSE) +
+  xlab("x-value") + 
+  ylab("Cumulative Distribution") +
+  labs(caption="Cumulative Density of Bera Governed by Alpha and Beta") 
+
+```
+
+1.3
+```{r}
+
+```
+
+# 1.2
 ```{r, echo=T}
 
 ```
