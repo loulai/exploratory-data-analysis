@@ -291,7 +291,7 @@ ageGender <- df %>%
 ageGender %>% 
   ggplot() +
   geom_point(aes(x=Driver_Race, y=Driver_Age, color=legal_action_taken, shape=Driver_Gender), alpha=0.5, position="jitter") + 
-  scale_color_manual(labels = c("Nope", "Yes, Busted!"), values = c("grey", "red"), name="Was legal action taken?") +
+  scale_color_manual(labels = c("Nope", "Yes, Busted!"), values = c("grey", "red3"), name="Was legal action taken?") +
   scale_shape_manual(values=c(1, 2)) +
   scale_shape(name = "Driver Gender") +
   xlab("Driver Race") + 
@@ -329,5 +329,41 @@ df %>%
     theme_economist() 
 
 ### great! 3rd confirmed
+```
+
+```{r}
+# years of service ~ average stops
+serviceStops <- df %>% 
+  mutate(yearBucket = case_when(Officer_Years_of_Service < 5 ~ "<5", # creating buckets for them to live in!
+                                (Officer_Years_of_Service >= 5) & (Officer_Years_of_Service < 10) ~ "5 - 10",
+                                (Officer_Years_of_Service >= 10) & (Officer_Years_of_Service < 15) ~ "10 - 15",
+                                (Officer_Years_of_Service >= 15) & (Officer_Years_of_Service < 20) ~ "15 - 20",
+                                (Officer_Years_of_Service >= 20) & (Officer_Years_of_Service < 25) ~ "20 - 25",
+                                (Officer_Years_of_Service >= 25) & (Officer_Years_of_Service <= 30) ~ "25 - 30",
+                                Officer_Years_of_Service > 30 ~ ">30")) %>% 
+  select(Officer_Gender, yearBucket)
+
+# order year buckets
+serviceStops$yearBucket <- ordered(serviceStops$yearBucket, levels= c("<5", "5 - 10", "10 - 15", "15 - 20", "20 - 25", "25 - 30", ">30"))
+
+# avg stops
+serviceStops %>% 
+  group_by(Officer_Gender, yearBucket) %>% 
+  summarize(stops = n()) %>% 
+  ggplot() +
+    geom_line(aes(x=yearBucket, y=stops, group=Officer_Gender, color=Officer_Gender), size=.7) +
+    geom_point(aes(x=yearBucket, y=stops, color=Officer_Gender, size=stops), shape=21, fill="white") +
+    xlab("Officer's Years of Service") +
+    ylab("Frequency of Stops") +
+    scale_color_discrete(name = "Officer Gender") +
+    scale_size_continuous(name="Stops") +
+    scale_y_continuous(labels=comma) +
+    labs(title="Frequency of Stops", subtitle="By Gender and Officer Years of Service") +
+    theme_tufte()+
+    theme(text=element_text(family="Helvetica"))
+  
+    
+
+
 ```
 
