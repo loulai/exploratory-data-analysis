@@ -18,12 +18,15 @@ library(scales)
 library(viridis)
 ```
 
+```{r}
+# load files
+setwd("~/Desktop/programming/eda/homework/hw3")
+original <- as.data.frame(read.csv("./Officer_Traffic_Stops.csv", na.strings = c("", " ", "  ", "NA"))) 
+```
 
 
 ```{r}
 
-setwd("~/Desktop/programming/eda/homework/hw3")
-original <- as.data.frame(read.csv("./Officer_Traffic_Stops.csv", na.strings = c("", " ", "  ", "NA"))) 
 df <-  original
 
 ##### Data Cleaning
@@ -221,26 +224,95 @@ dfStoppedRace %>%
 ```
 
 ```{r}
+# Using Alluvia! Great for categoricla data, which we have a lot of
+library(ggalluvial)
 
-# Most likely to stop
-# This is some hacky stuff!
+likelyAlluvia <- df %>% 
+  filter(!Driver_Race=="Other/Unknown" & !Driver_Race=="Native American") %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  group_by(legal_action_taken, Driver_Gender, Driver_Race) %>% 
+  summarise(Frequency=n())
 
-OfficerRaces <- df %>% 
-  group_by(Officer_Race) %>% 
-  summarize(n())
+is_alluvia_form(likelyAlluvia, axes=1:3, silent=TRUE)
 
-DriverRaces <- df %>% 
-  group_by(Driver_Race) %>% 
-  summarize(n())
+likelyAlluvia %>% 
+  ggplot(aes(y = Frequency, axis2 = Driver_Gender, axis1=Driver_Race)) +
+  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", label.strata = TRUE) +
+  scale_x_discrete(limits = c("Gender", "Race"), expand = c(.05, .05)) +
+  scale_fill_brewer(type = "qual", palette = "Spectral",name="Legal Action Taken") +
+  ggtitle("Was Legal Action Taken? By Driver Gender and Driver Race")
 
-# some data cleaning required: select only certain races, eliminate outliers
-# from the above, we 
-likelydf <- df %>% 
-  select(Officer_Race, Driver_Race) %>% 
-  filter(O)
+# What about initial Reason for Stop?
+likelyAlluvia2 <- df %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  group_by(legal_action_taken, Reason_for_Stop, Driver_Gender) %>% 
+  summarise(Frequency=n())
 
+is_alluvia_form(likelyAlluvia2, axes=1:3, silent=TRUE)
 
+likelyAlluvia2 %>% 
+  ggplot(aes(y = Frequency, axis2 = Driver_Gender, axis1=Reason_for_Stop)) +
+  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", label.strata = TRUE) +
+  scale_x_discrete(limits = c("Gender", "Reason for Stop"), expand = c(.1, .1)) +
+  scale_fill_brewer(type = "qual", palette = "Set1", name="Legal Action Taken") +
+  ggtitle("Was Legal Action Taken? By Initial Reason for Stop and Gender")
+
+# What about just genders?
+likelyAlluvia3 <- df %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  group_by(legal_action_taken, Officer_Gender, Driver_Gender) %>% 
+  summarise(Frequency=n())
+
+is_alluvia_form(likelyAlluvia3, axes=1:3, silent=TRUE)
+
+likelyAlluvia3 %>% 
+  ggplot(aes(y = Frequency, axis1 = Officer_Gender, axis2=Driver_Gender )) +
+  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", label.strata = TRUE) +
+  scale_x_discrete(limits = c("Officer Gender", "Driver Gender"), expand = c(.1, .1)) +
+  scale_fill_brewer(type = "qual", palette = "Set1", name="Legal Action Taken") +
+  ggtitle("Was Legal Action Taken? By Officer and Driver Genders")
+
+#### GOOD
+```
+
+```{r}
+ageGender <- df %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  select()
 ```
 
 
+```{r}
+# Frequency of Stops by Month
+monthStops <- df %>% 
+  group_by(Month_of_Stop) %>% 
+  summarize(Freq=n())
+
+library(RColorBrewer)
+library(ggthemes)
+#getPalette = colorRampPalette(brewer.pal(9, "Set1"))
+
+df %>% 
+  mutate(season = case_when(Month_of_Stop == as.Date("2016-06-01") | Month_of_Stop == as.Date("2016-07-01") | Month_of_Stop == as.Date("2016-08-01") ~ "Summer",
+                            Month_of_Stop == as.Date("2016-03-01") | Month_of_Stop == as.Date("2016-04-01") | Month_of_Stop == as.Date("2016-05-01") ~ "Spring",
+                            Month_of_Stop == as.Date("2016-12-01") | Month_of_Stop == as.Date("2016-01-01") | Month_of_Stop == as.Date("2016-02-01") ~ "Winter",
+                            Month_of_Stop == as.Date("2016-09-01") | Month_of_Stop == as.Date("2016-10-01") | Month_of_Stop == as.Date("2016-11-01") ~ "Autumn")) %>% 
+  group_by(Month_of_Stop) %>% 
+  ggplot() +
+    geom_bar(aes(Month_of_Stop, fill=factor(season))) +
+    #scale_fill_manual(values = getPalette(colourCount)) +
+    scale_fill_brewer(palette = "Spectral", name="Season") +
+    xlab("Month of Stop") +
+    ylab("Number of Stops Recorded") +
+    ggtitle("Number of Stops per Month, Coloured by Season") +
+    theme_economist() 
+
+### great! 3rd confirmed
+```
 
