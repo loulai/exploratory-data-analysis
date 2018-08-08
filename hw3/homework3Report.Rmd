@@ -16,18 +16,20 @@ library(forcats)
 library(ggplot2)
 library(scales)
 library(viridis)
+library(ggthemes)
 ```
 
 ```{r}
 # load files
 setwd("~/Desktop/programming/eda/homework/hw3")
 original <- as.data.frame(read.csv("./Officer_Traffic_Stops.csv", na.strings = c("", " ", "  ", "NA"))) 
+
 ```
 
-
+# Data Cleaning
 ```{r}
 
-df <-  original
+df <- original
 
 ##### Data Cleaning
 
@@ -48,7 +50,6 @@ returnCleanData <- function(){
   df$Month_of_Stop <- parse_date(df$Month_of_Stop, "%Y/%m")
   
   ## Logicals
-  levels(df$Was_a_Search_Conducted)
   levels(df$Was_a_Search_Conducted) <- c(FALSE, TRUE) # set 'No' to FALSE, 'Yes' to TRUE
   df$Was_a_Search_Conducted <- as.logical(df$Was_a_Search_Conducted)
   
@@ -76,242 +77,13 @@ df <- returnCleanData()
 
 ```
 
-```{r}
-# Data Exploration
-glimpse(df) # 79884 observations, 12 variables
-
-# How many officers, by race
-df %>% 
-  count(Officer_Race) %>% 
-  arrange(desc(n)) %>% 
-  View()
-
-df %>% 
-  mutate(Officer_Race = Officer_Race %>% fct_infreq()) %>% 
-  ggplot(aes(Officer_Race)) +
-  geom_bar() +
-  xlab("Race of the Officer") +
-  ylab("Number of Officers") +
-  labs(title="Count of Officers by Race") +
-  scale_y_continuous(breaks=seq(0, 60000, 10000), labels=comma_format()) +
-  theme_classic() +
-  theme(
-    axis.text.x=element_text(angle=60, hjust=1),
-    panel.background = element_rect(fill="lightblue"),
-    panel.grid.minor = element_line(size=0.25, linetype='solid',
-                                    color='white'),
-    text=element_text(family="Helvetica"))
-
-# How many drivers stopped, by race
-df %>% 
-  count(Driver_Race) %>% 
-  arrange(desc(n)) %>% 
-  View()
-
-df %>% 
-  mutate(Driver_Race = Driver_Race %>% fct_infreq()) %>% 
-  ggplot(aes(Driver_Race)) +
-  geom_bar() +
-  xlab("Race of the Driver") +
-  ylab("Number of Drivers") +
-  labs(title="Count of Drivers by Race") +
-  scale_y_continuous(breaks=seq(0, 50000, 10000), labels=comma_format()) +
-  theme_classic() +
-  theme(
-    axis.text.x=element_text(angle=60, hjust=1),
-    panel.background = element_rect(fill="lightblue"),
-    panel.grid.minor = element_line(size=0.25, linetype='solid',
-                                    color='white'),
-    text=element_text(family="Helvetica"))
-
-# we see that it's mostly white officers, by a large amount. Come back and see percentages.
-```
-
-```{r}
-# Given that some legal action resulted, how many of those arrested are of each ethnicity?
-
-# first, let's explore. How many legal actions were taken?
-totalStops <- nrow(df) # 79,884
-totalLegalActions <- df %>% filter(Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% nrow() # 34,506
-totalLegalActions/totalStops # 43% of stops result in a legal action
-
-legalActiondf <- df %>% filter(Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest")
-
-df2 <- legalActiondf %>% 
-  group_by(Driver_Race) %>% 
-  summarize(ethnicityArrestedPercent = 100 * n()/totalLegalActions) %>% 
-  arrange(desc(ethnicityArrestedPercent)) # black = 53%, White 42%
-
-View(df2)
-
-pie <- df2 %>% 
-  mutate(ethnicityArrestedPercent = ethnicityArrestedPercent) %>% 
-  ggplot(aes(x="", y=ethnicityArrestedPercent, fill=Driver_Race)) +
-  geom_bar(width=1, stat="identity") + 
-  coord_polar("y", start=0) +
-  labs(title="Given arrested, what is their ethnicity?", xlab="", ylab="") +
-  geom_text(aes(y = ethnicityArrestedPercent/5 + c(0, cumsum(ethnicityArrestedPercent)[-length(ethnicityArrestedPercent)]), 
-            label = percent(ethnicityArrestedPercent/100)), size=3)+ 
-  scale_fill_brewer()
-
-pie
-
-# Wow. Now, let's say you've been stopped. Given that you're X race, 
-# are you more or less likely to be arrested?
-
-# create a legal action column and select only relevant columns
-legalActiondf <- df %>% 
-  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
-  select(-1, -5, -7)
-
-likelihood_to_be_arrested_given_race <- legalActiondf %>% 
-  group_by(Driver_Race) %>% 
-  summarize(percent_legal_action_taken = 100 * sum(legalAction == T)/n()) %>% 
-  ungroup() %>% 
-  arrange(desc(percent_legal_action_taken))
-
-likelihood_to_be_arrested_given_race
-pie2 <- df2 %>% 
-  mutate(ethnicityArrestedPercent = ethnicityArrestedPercent) %>% 
-  group_by(ethnicityArrestedPercent) 
-
-pie2
-
-# Given ethnicity, how likely are you to be stopped? Actually can't answer this! Coz we only see people who have already been stopped
-```
-
-
-```{r}
-# Do officers have a biases towards stopping certain races?
-
-# how many stops per officer race?
-dfStoppedRace <-  df %>% 
-  group_by(Officer_Race) %>% 
-  mutate(driver_stops_made = sum(n())) %>% 
-  ungroup()
-
-# get a count of how many stops made, by ethnicity
-dfStoppedRaceSummarized <-  df %>% 
-  group_by(Officer_Race) %>% 
-  summarize(driver_stops_made = sum(n())) %>% 
-  arrange(desc(driver_stops_made)) %>% 
-  top_n(5)
-
-
-dfStoppedRace %>% 
-  group_by(Officer_Race, Driver_Race) %>% 
-  summarize(percent_race_stopped = 100 * n()/driver_stops_made[1]) %>% 
-  ungroup() %>%
-  group_by(Officer_Race) %>% 
-  arrange(desc(percent_race_stopped), .by_group=T) %>% 
-  View()
-
-dfStoppedRace$driver_stops_made[2]
-
-# What percent of stops of people actually lead to an arrest?
-# 42
-
-# Driver race ~ officer race <<<<<<<<< good! Could add count but meh
-dfStoppedRace %>% 
-  mutate(Officer_Race = Officer_Race %>% fct_infreq()) %>% 
-  ggplot(aes(Officer_Race)) +
-  geom_bar(aes(fill=Driver_Race)) + 
-  scale_fill_brewer(palette="Green", name="Driver Race") +
-  theme(axis.text.x=element_text(angle=10, hjust=1)) +
-  xlab("Officer Race") + 
-  ylab("Count of Drivers Stopped")
-
-```
-
-```{r}
-# Using Alluvia! Great for categoricla data, which we have a lot of
-library(ggalluvial)
-
-likelyAlluvia <- df %>% 
-  filter(!Driver_Race=="Other/Unknown" & !Driver_Race=="Native American") %>% 
-  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
-  group_by(legal_action_taken, Driver_Gender, Driver_Race) %>% 
-  summarise(Frequency=n())
-
-is_alluvia_form(likelyAlluvia, axes=1:3, silent=TRUE)
-
-likelyAlluvia %>% 
-  ggplot(aes(y = Frequency, axis2 = Driver_Gender, axis1=Driver_Race)) +
-  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
-  geom_stratum(width = 1/12, fill = "black", color = "grey") +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Gender", "Race"), expand = c(.05, .05)) +
-  scale_fill_brewer(type = "qual", palette = "Spectral",name="Legal Action Taken") +
-  ggtitle("Was Legal Action Taken? By Driver Gender and Driver Race")
-
-# What about initial Reason for Stop?
-likelyAlluvia2 <- df %>% 
-  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
-  group_by(legal_action_taken, Reason_for_Stop, Driver_Gender) %>% 
-  summarise(Frequency=n())
-
-is_alluvia_form(likelyAlluvia2, axes=1:3, silent=TRUE)
-
-likelyAlluvia2 %>% 
-  ggplot(aes(y = Frequency, axis2 = Driver_Gender, axis1=Reason_for_Stop)) +
-  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
-  geom_stratum(width = 1/12, fill = "black", color = "grey") +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Gender", "Reason for Stop"), expand = c(.1, .1)) +
-  scale_fill_brewer(type = "qual", palette = "Set1", name="Legal Action Taken") +
-  ggtitle("Was Legal Action Taken? By Initial Reason for Stop and Gender")
-
-# What about just genders?
-likelyAlluvia3 <- df %>% 
-  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
-  group_by(legal_action_taken, Officer_Gender, Driver_Gender) %>% 
-  summarise(Frequency=n())
-
-is_alluvia_form(likelyAlluvia3, axes=1:3, silent=TRUE)
-
-likelyAlluvia3 %>% 
-  ggplot(aes(y = Frequency, axis1 = Officer_Gender, axis2=Driver_Gender )) +
-  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
-  geom_stratum(width = 1/12, fill = "black", color = "grey") +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Officer Gender", "Driver Gender"), expand = c(.1, .1)) +
-  scale_fill_brewer(type = "qual", palette = "Set1", name="Legal Action Taken") +
-  ggtitle("Was Legal Action Taken? By Officer and Driver Genders")
-
-#### GOOD
-```
-
-```{r}
-# By race, age and gender
-ageGender <- df %>% 
-  filter(!Driver_Race == "Other/Unknown" & !Driver_Race == "Native American") %>% 
-  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
-  select(Driver_Age, Driver_Gender, Driver_Race, legal_action_taken) 
-
-ageGender %>% 
-  ggplot() +
-  geom_point(aes(x=Driver_Race, y=Driver_Age, color=legal_action_taken, shape=Driver_Gender), alpha=0.5, position="jitter") + 
-  scale_color_manual(labels = c("Nope", "Yes, Busted!"), values = c("grey", "red3"), name="Was legal action taken?") +
-  scale_shape_manual(values=c(1, 2)) +
-  scale_shape(name = "Driver Gender") +
-  xlab("Driver Race") + 
-  ylab("Driver Age") +
-  labs(title="Was Legal action taken?", subtitle= "Based on Age, Race and Gender") +
-  theme_few()
-
-# Great! 4th confirmed
-```
-
-
+\newpage
+# Exploring Months
 ```{r}
 # Frequency of Stops by Month
 monthStops <- df %>% 
   group_by(Month_of_Stop) %>% 
   summarize(Freq=n())
-
-library(RColorBrewer)
-library(ggthemes)
-#getPalette = colorRampPalette(brewer.pal(9, "Set1"))
 
 df %>% 
   mutate(season = case_when(Month_of_Stop == as.Date("2016-06-01") | Month_of_Stop == as.Date("2016-07-01") | Month_of_Stop == as.Date("2016-08-01") ~ "Summer",
@@ -321,20 +93,27 @@ df %>%
   group_by(Month_of_Stop) %>% 
   ggplot() +
     geom_bar(aes(Month_of_Stop, fill=factor(season))) +
-    #scale_fill_manual(values = getPalette(colourCount)) +
     scale_fill_brewer(palette = "Spectral", name="Season") +
     xlab("Month of Stop") +
     ylab("Number of Stops Recorded") +
-    ggtitle("Number of Stops per Month, Coloured by Season") +
+    labs(title= "Number of Stops per Month",
+         subtitle="Subset by Season") +
     theme_economist() 
 
-### great! 3rd confirmed
 ```
+The Spring and Summer months have the highest levels of stops recorded, and it
+appears that Autumn and Winter are, on average, the lowest months. 
 
+This could be becuase people are more likely to drive around when the weather is nice,
+such as in the Spring or the end of Winter. Conversely, at the start of Winter, there
+are far fewer stops made.
+
+\newpage
+# Exploring Years of Service
 ```{r}
 # years of service ~ average stops
-serviceStops <- df %>% 
-  mutate(yearBucket = case_when(Officer_Years_of_Service < 5 ~ "<5", # creating buckets for them to live in!
+serviceStops <- df %>% # creating bucket in 5 yr increments
+  mutate(yearBucket = case_when(Officer_Years_of_Service < 5 ~ "<5", 
                                 (Officer_Years_of_Service >= 5) & (Officer_Years_of_Service < 10) ~ "5 - 10",
                                 (Officer_Years_of_Service >= 10) & (Officer_Years_of_Service < 15) ~ "10 - 15",
                                 (Officer_Years_of_Service >= 15) & (Officer_Years_of_Service < 20) ~ "15 - 20",
@@ -356,14 +135,95 @@ serviceStops %>%
     xlab("Officer's Years of Service") +
     ylab("Frequency of Stops") +
     scale_color_discrete(name = "Officer Gender") +
+    #scale_color_manual(labels = c("Nope", "Yes, Busted!"), values = c("grey", "red3"), name="Was legal action taken?") +
     scale_size_continuous(name="Stops") +
     scale_y_continuous(labels=comma) +
     labs(title="Frequency of Stops", subtitle="By Gender and Officer Years of Service") +
-    theme_tufte()+
+    theme_economist() +
     theme(text=element_text(family="Helvetica"))
-  
-    
-
 
 ```
+We can clearly see that the bulk of stops are made by younger officers, and the least
+by senior officers. This could be due to the enthusiasm of younger officers, or that
+senior officers are doing more important work. 
+
+The _average_ number of stops made would be an ideal statistic; however, though seemingly 
+straightforward, there is no actual way to derive this information from the given dataset 
+because we were only given the number of stops that were made. In order to get an average,
+we would need to count the total number of officers - no only officers that made a stop - in a particular year bucket and take that as our denominator to get the average.
+
+\newpage
+# Exploring Legal Action
+
+Not every stop leads to an arrest. Some stops can result in a mere verbal warning, with the most severe being an arrest on
+the spot. In this case study, we definte a legal action as receiving a citation or getting arrested. 
+
+These fields are found in the `Result_of_Stop` column.
+
+```{r, message=F, warning=F}
+# Exploring legal action by race, age and gender
+ageGender <- df %>% 
+  filter(!Driver_Race == "Other/Unknown" & !Driver_Race == "Native American") %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  select(Driver_Age, Driver_Gender, Driver_Race, legal_action_taken) 
+
+ageGender %>% 
+  ggplot() +
+  geom_point(aes(x=Driver_Race, y=Driver_Age, color=legal_action_taken, shape=Driver_Gender), alpha=0.5, position="jitter") + 
+  scale_color_manual(labels = c("Nope", "Yes, Busted!"), values = c("grey", "red3"), name="Was legal action taken?") +
+  scale_shape_manual(values=c(1, 2)) +
+  scale_shape(name = "Driver Gender") +
+  xlab("Driver Race") + 
+  ylab("Driver Age") +
+  labs(title="Was Legal action taken?", subtitle= "Based on Age, Race and Gender") +
+  theme_few()
+```
+
+On a whole, we see that white drivers 
+
+\newpage
+# Exploring Relationships Between Columns
+```{r, warning=F}
+# Using alluvia, which is great for categoricla data, which we have a lot of
+library(ggalluvial)
+
+likelyAlluvia <- df %>% 
+  filter(!Driver_Race=="Other/Unknown" & !Driver_Race=="Native American") %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  group_by(legal_action_taken, Driver_Gender, Driver_Race) %>% 
+  summarise(Frequency=n())
+
+is_alluvia_form(likelyAlluvia, axes=1:3, silent=TRUE)
+
+likelyAlluvia %>% 
+  ggplot(aes(y = Frequency, axis2 = Driver_Gender, axis1=Driver_Race)) +
+  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", label.strata = TRUE) +
+  scale_x_discrete(limits = c("Gender", "Race"), expand = c(.05, .05)) +
+  scale_fill_brewer(type = "qual", palette = "Spectral",name="Legal Action Taken") +
+  ggtitle("Was Legal Action Taken? By Driver Gender and Driver Race")
+```
+
+\newpage
+```{r, warning=F}
+# What about just genders?
+likelyAlluvia3 <- df %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  group_by(legal_action_taken, Officer_Gender, Driver_Gender) %>% 
+  summarise(Frequency=n())
+
+is_alluvia_form(likelyAlluvia3, axes=1:3, silent=TRUE)
+
+likelyAlluvia3 %>% 
+  ggplot(aes(y = Frequency, axis1 = Officer_Gender, axis2=Driver_Gender )) +
+  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", label.strata = TRUE) +
+  scale_x_discrete(limits = c("Officer Gender", "Driver Gender"), expand = c(.1, .1)) +
+  scale_fill_brewer(type = "qual", palette = "Set1", name="Legal Action Taken") +
+  ggtitle("Was Legal Action Taken? By Officer and Driver Genders")
+```
+
+
 
