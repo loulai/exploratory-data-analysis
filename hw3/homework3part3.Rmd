@@ -1,0 +1,73 @@
+---
+title: "Homework3Part3"
+author: "Louise Lai"
+date: "August 7, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# let's use decision trees!
+library(rpart)
+library(rpart.plot)
+
+# 0. Clean table to remove columns that make up legal_action_taken
+legalActionTreedf <- legalActiondf[c(-8)]
+
+# 0.1 Change from boolean to string (factor) in order for prediction to work
+legalActionTreedf %<>% 
+  mutate(legal_action_taken = replace(legal_action_taken, legal_action_taken==T, "Legal Action Taken")) %>% 
+           mutate(legal_action_taken = replace(legal_action_taken, legal_action_taken==F, "Not Taken"))
+
+
+# 1. Begin with a small complexity parameter (0.0001)
+set.seed(123)
+treeLegal<- rpart(legal_action_taken ~ Officer_Race + Officer_Gender + Driver_Race + Driver_Age + Driver_Gender + Reason_for_Stop + Was_a_Search_Conducted, 
+              data=legalActionTreedf, 
+              control=rpart.control(cp=0.001)) # colnames(legalActiondf)
+
+# 2. Pick tree size that minimizes misclassification
+printcp(treeLegal)
+bestcp <- treeLegal$cptable[which.min(treeLegal$cptable[,"xerror"]), "CP"]
+bestcp
+
+# 3. Prune tree using the best cp
+treeLegal.pruned <- prune(treeLegal, cp = bestcp)
+printcp(treeLegal)
+
+# confusion matrix (training data)
+treeLegal.pruned
+conf.matrix <- table(legalActionTreedf$legal_action_taken, 
+                     predict(tree.pruned.new, type="class"))
+
+rownames(conf.matrix) <- paste("Actual", rownames(conf.matrix), sep=":")
+colnames(conf.matrix) <- paste("Pred", colnames(conf.matrix), sep=":")
+print(conf.matrix)
+
+# plotting
+tot_count <- function(x, labs, digits, varlen){
+  paste(labs, "\n\nn =", x$frame$n)
+}
+
+prp(tree.pruned, faclen = 0, cex = 0.4, node.fun=tot_count)
+
+# including colour
+only_count <- function(x, labs, digits, varlen)
+{
+  paste(x$frame$n)
+}
+
+boxcols <- c("pink", "palegreen3")[tree.pruned$frame$yval]
+
+par(xpd=TRUE)
+prp(treeLegal.pruned, faclen = 0, cex = 0.8, node.fun=only_count, box.col = boxcols)
+legend("bottomleft", legend = c("legal action taken", "not taken"), fill = c("pink", "palegreen3"))
+
+###
+
+
+```
+

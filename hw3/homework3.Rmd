@@ -1,25 +1,26 @@
 ---
-title: "homework3"
+title: "Homework 3"
+subtitle: "Question 1"
 author: "Louise Lai"
 date: "August 2, 2018"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = T)
 library(ggplot2)
 library(dplyr)
 library(magrittr)
-library(zoo)
+library(tidyr)
 ```
 
-# Question 1
-# 1.1
-```{r}
-
+## 1.1
+# PDFs
+```{r, warning=F}
 # generate initial dataframe, arranged by smallest xval first
-PDFs <- as.data.frame(runif(100, 0.0, 1.0))
+PDFs <- as.data.frame(runif(1000, 0.0, 1.0))
 colnames(PDFs) <- "xValue"
+
 PDFs %<>% 
   arrange(xValue)
   
@@ -67,10 +68,13 @@ PDFs %>%
                                            bquote(alpha==2~","~beta==5))) + 
   xlab("x-value") + 
   ylab("Density Function Value") +
-  labs(caption="Beta Distributions with Given Alpha and Beta")
+  ylim(0, 3.5) +
+  labs(caption="Beta Distributions Governed by Alpha and Beta")
 ```
 
-# 1.2
+\newpage
+## 1.2
+# CDFs
 ```{r}
 
 generateCDFs <- function(df, alphaArray, betaArray){
@@ -114,17 +118,32 @@ ggplot(data=PDFCDF, aes(x=xValue)) +
   scale_fill_discrete(guide=FALSE) +
   xlab("x-value") + 
   ylab("Cumulative Distribution") +
-  labs(caption="Cumulative Density of Bera Governed by Alpha and Beta") 
+  labs(caption="Cumulative Density of Beta Function Governed by Alpha and Beta") 
 
 ```
 
-1.3
+\newpage
+## 1.3
+# PDFs & CDFs
 ```{r}
 
+names(PDFCDF) <-  c("xValue", "PDF 1", "PDF 2", "PDF 3", "PDF 4", "PDF 5",
+                  "CDF 1", "CDF 2", "CDF 3", "CDF 4", "CDF 5")
+
+PDFCDF %>% 
+  gather(-xValue, key='var', value="value") %>% 
+  ggplot(aes(x=xValue, y = value)) +
+    geom_line() + 
+    scale_color_discrete(name="", labels=c(bquote(alpha==0.5~","~beta==0.5),
+                                         bquote(alpha==5~","~beta==1),
+                                         bquote(alpha==1~","~beta==3),
+                                         bquote(alpha==2~","~beta==3),
+                                         bquote(alpha==2~","~beta==5))) + 
+  facet_wrap(~ var, scales="free", ncol=5) +
+  xlab("x-value") +
+  ylab("Density/Cumulative") +
+  labs(caption="PDFs and CDFs of Beta Governed by Alpha and Beta") 
+  
+
+
 ```
-
-# 1.2
-```{r, echo=T}
-
-```
-
