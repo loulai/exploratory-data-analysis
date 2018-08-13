@@ -7,12 +7,17 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Desktop/programming/eda/homework/hw3")
+original <- as.data.frame(read.csv("./Officer_Traffic_Stops.csv", na.strings = c("", " ", "  ", "NA"))) 
+
+df <- original
 ```
 
 ```{r}
 # let's use decision trees!
 library(rpart)
 library(rpart.plot)
+
 
 # 0. Clean table to remove columns that make up legal_action_taken
 legalActionTreedf <- legalActiondf[c(-8)]

@@ -1,5 +1,6 @@
 ---
-title: "Traffic Exploration"
+title: "Homework 3"
+subtitle: "Question 2: Traffic Exploration"
 author: "Louise Lai"
 date: "August 4, 2018"
 output: pdf_document
@@ -17,6 +18,7 @@ library(ggplot2)
 library(scales)
 library(viridis)
 library(ggthemes)
+library(ggalluvial)
 ```
 
 ```{r}
@@ -41,7 +43,7 @@ returnCleanData <- function(){
   
   ## NAs
   df$Officer_Race <- as.character(df$Officer_Race)
-  df %<>% mutate(Officer_Race = replace(Officer_Race, is.na(Officer_Race), "Missing")) # replace
+  df %<>% mutate(Officer_Race = replace(Officer_Race, is.na(Officer_Race), "Missing")) 
   df$Officer_Race <- as.factor(df$Officer_Race)
   
   # unsure what to do with CMPD_Division NAs yet!
@@ -59,12 +61,14 @@ returnCleanData <- function(){
   # Change White/Hispanic 
   df %>% 
     filter(Driver_Ethnicity == "Hispanic") %>% 
-    nrow() # There are 6,623 drivers that are White and Hispanic. 7,578 total == 955 unidentified other Hispanic. Small enough to disregard.
+    nrow() # There are 6,623 drivers that are White and Hispanic. 
+   #7,578 total == 955 unidentified other Hispanic. Small enough to disregard.
   
   df$Driver_Race <- as.character(df$Driver_Race)
   
   df %<>%
-    mutate(Driver_Race = replace(Driver_Race, Driver_Ethnicity == "Hispanic", "Hispanic")) # replace Hispanic (ethnicity) to just Hispanic (race)
+    mutate(Driver_Race = replace(Driver_Race, Driver_Ethnicity == "Hispanic", "Hispanic")) 
+  # replace Hispanic (ethnicity) to just Hispanic (race)
   
   # Filter truly unnecessary columns
   df %<>% 
@@ -111,7 +115,7 @@ are far fewer stops made.
 \newpage
 # Exploring Years of Service
 ```{r}
-# years of service ~ average stops
+# years of service ~ stops
 serviceStops <- df %>% # creating bucket in 5 yr increments
   mutate(yearBucket = case_when(Officer_Years_of_Service < 5 ~ "<5", 
                                 (Officer_Years_of_Service >= 5) & (Officer_Years_of_Service < 10) ~ "5 - 10",
@@ -135,7 +139,6 @@ serviceStops %>%
     xlab("Officer's Years of Service") +
     ylab("Frequency of Stops") +
     scale_color_discrete(name = "Officer Gender") +
-    #scale_color_manual(labels = c("Nope", "Yes, Busted!"), values = c("grey", "red3"), name="Was legal action taken?") +
     scale_size_continuous(name="Stops") +
     scale_y_continuous(labels=comma) +
     labs(title="Frequency of Stops", subtitle="By Gender and Officer Years of Service") +
@@ -179,10 +182,45 @@ ageGender %>%
   theme_few()
 ```
 
-On a whole, we see that white drivers 
+On a whole, we see that white drivers that are stopped are generally older than other
+drivers. It appears that older Asian and Hispanic people are rarely getting stopped! 
+
+There could be a host of reasons for this. Perhaps there are just fewer Asian and Hispanic
+people over the age of 50, and this sample reflects the general population. Other theories include: older Asian and Hispanic people don't tend to get stopped becuase they are law-abiding, they prefer public transport, they don't leave the house often. These could
+all be valid hypotheses to this visualization.
+
+Funnily enough, if you look closely, the older drivers that get arrested tend to be female instead
+ of male.
+
 
 \newpage
-# Exploring Relationships Between Columns
+# Exploring Officer Genders and Driver Genders
+```{r, warning=F}
+# What about just genders?
+likelyAlluvia3 <- df %>% 
+  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
+  group_by(legal_action_taken, Officer_Gender, Driver_Gender) %>% 
+  summarise(Frequency=n())
+
+is_alluvia_form(likelyAlluvia3, axes=1:3, silent=TRUE)
+
+likelyAlluvia3 %>% 
+  ggplot(aes(y = Frequency, axis1 = Officer_Gender, axis2=Driver_Gender )) +
+  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", label.strata = TRUE) +
+  scale_x_discrete(limits = c("Officer Gender", "Driver Gender"), expand = c(.1, .1)) +
+  scale_fill_brewer(type = "qual", palette = "Set1", name="Legal Action Taken") +
+  ggtitle("Was Legal Action Taken? By Officer and Driver Genders")
+```
+
+The first observation is that there are an overwhelming amount of male officers. 
+Second, both male and female officers take legal action to about fifty percent of the
+drivers they stop. 
+Third, male and female officers tend _ever so slightly_ to stop male drivers more than
+female drivers, explaining the overall _slight_ majority of female vs. male drivers stopped.
+
+\newpage
 ```{r, warning=F}
 # Using alluvia, which is great for categoricla data, which we have a lot of
 library(ggalluvial)
@@ -202,28 +240,15 @@ likelyAlluvia %>%
   geom_label(stat = "stratum", label.strata = TRUE) +
   scale_x_discrete(limits = c("Gender", "Race"), expand = c(.05, .05)) +
   scale_fill_brewer(type = "qual", palette = "Spectral",name="Legal Action Taken") +
-  ggtitle("Was Legal Action Taken? By Driver Gender and Driver Race")
+  labs(title="Was Legal Action Taken?", 
+       subtitle="By Driver Gender and Driver Race") +
+  theme_classic()
 ```
+The most fascinating two points here are the Black and Hispanic outcomes. It appears that
+black and hispanic people are stopped very frequently (they make up a dispoportionately large pool of total drivers stopped) and yet, the outcome is less legal action. 
 
-\newpage
-```{r, warning=F}
-# What about just genders?
-likelyAlluvia3 <- df %>% 
-  mutate(legal_action_taken = Result_of_Stop == "Citation Issued" | Result_of_Stop == "Arrest") %>% 
-  group_by(legal_action_taken, Officer_Gender, Driver_Gender) %>% 
-  summarise(Frequency=n())
+This might mean that officers are being over-cautious of black and hispanic people, and one they have been stopped and searched, they average a lower rate of legal action taken because they were over-sampled in the first place. This a large statement, and should be backed up with more evidence. 
 
-is_alluvia_form(likelyAlluvia3, axes=1:3, silent=TRUE)
-
-likelyAlluvia3 %>% 
-  ggplot(aes(y = Frequency, axis1 = Officer_Gender, axis2=Driver_Gender )) +
-  geom_alluvium(aes(fill = legal_action_taken), width = 1/12) +
-  geom_stratum(width = 1/12, fill = "black", color = "grey") +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Officer Gender", "Driver Gender"), expand = c(.1, .1)) +
-  scale_fill_brewer(type = "qual", palette = "Set1", name="Legal Action Taken") +
-  ggtitle("Was Legal Action Taken? By Officer and Driver Genders")
-```
 
 
 
