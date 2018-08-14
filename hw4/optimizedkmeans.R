@@ -2,6 +2,7 @@ library(dplyr)
 library(magrittr)
 library(ggplot2)
 library(pdist)
+library(microbenchmark)
 
 
 ############
@@ -14,7 +15,6 @@ myClusterNum <- 2
 set.seed(102)
 myScatterInput <- data_frame(myCol_01 = runif(100000, -1, 1))
 myClusterNum <- 4
-
 
 # TEST DATA 3
 set.seed(103)
@@ -51,78 +51,73 @@ myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2
                              myCol_08 = rnorm(10000, 30, 2))
 myClusterNum <- 12
 
-# TEST DATA DEBUGGING
-set.seed(101)
-m <- 2  # m = dimensions
-myClusterNum <- 5 #as.integer(runif(1, 2, n)/2)
-myScatterInput <- as.data.frame(matrix(runif(n*m, 1, 10), ncol=m)) 
-
 #############
-start.time <- Sys.time()
-#############
-#points <- myScatterInput # this is more like a safety check so I can always go back to myScatterInput
-n <- nrow(myScatterInput) # n = num vectors
-m <- ncol(myScatterInput) # m = dimensions
 
-# 1) random assignment
-myScatterInput <- myScatterInput %>% 
-  mutate(clusterAssignment = rep_len(1:myClusterNum, n))
-
-swapped = T
-while(swapped == T){
+myKMeans <- function(myScatterInput, myClusterNum){
+  n <- nrow(myScatterInput) # n = num vectors
+  m <- ncol(myScatterInput) # m = dimensions
   
-  # 2) compute centroids
-  centroids <- c()
-  for(i in 1:myClusterNum){
-    centroids <- as.data.frame(rbind(centroids, myScatterInput %>% 
-                         filter(clusterAssignment == i) %>% 
-                         colMeans()))
+  # 1) random assignment
+  myScatterInput <- myScatterInput %>% 
+    mutate(clusterAssignment = rep_len(1:myClusterNum, n))
+  
+  swapped = T
+  while(swapped == T){
+    
+    # 2) compute centroids
+    centroids <- c()
+    for(i in 1:myClusterNum){
+      centroids <- as.data.frame(rbind(centroids, myScatterInput %>% 
+                           filter(clusterAssignment == i) %>% 
+                           colMeans()))
+    }
+    
+    # 3) distance from each data point to centriod 
+    # we use the pdist package, which is like the dist package without the unnecessary computations
+    # n = rows
+    newClusters <- c()
+    for(i in 1:n){
+      distPointCentriods <- pdist(X = centroids[1:m], Y=myScatterInput[i, 1:m]) # targets=centriods, query=point.
+      newClusters[i] <- which.min(distPointCentriods@dist) # we target centriod is the min dist between query and all points in target
+    }
+    newClusters
+    
+    # 4b) assign to centroid
+    swapped = F
+    if(!identical(myScatterInput['clusterAssignment'][[1]], newClusters)){ # if previous clusters don't equal new clusters, swap and indicate swap occured
+      myScatterInput['clusterAssignment'] = newClusters
+      swapped=T
+    }
+    print(swapped)
   }
   
-  # 3) distance from each data point to centriod 
-  # we use the pdist package, which is like the dist package without the unnecessary computations
-  # n = rows
-  newClusters <- c()
-  for(i in 1:n){
-    distPointCentriods <- pdist(X = centroids[1:m], Y=myScatterInput[i, 1:m]) # targets=centriods, query=point.
-    newClusters[i] <- which.min(distPointCentriods@dist) # we target centriod is the min dist between query and all points in target
+  # 5) plot
+  if(m==2){
+    print(ggplot(myScatterInput) + 
+      geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) + 
+      geom_point(data=as.data.frame(centroids), aes(x=myCol_01, y=myCol_02, color=clusterAssignment), size=6, pch=13) +
+      scale_color_continuous(breaks = c(1:myClusterNum)) +
+      theme_classic())
   }
-  newClusters
-  
-  # 4b) assign to centroid
-  swapped = F
-  if(!identical(myScatterInput['clusterAssignment'][[1]], newClusters)){ # if previous clusters don't equal new clusters, swap and indicate swap occured
-    myScatterInput['clusterAssignment'] = newClusters
-    swapped=T
-  }
-  print(swapped)
 }
 
-##########
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-print(time.taken)
+# timing
+microbenchmark(myFunc=myKMeans(myScatterInput, myClusterNum), times=1)
+
 ##########
 
-if(n==2){
-  ###### plot centriods!
-  ggplot(myScatterInput) + 
-    geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) + 
-    geom_point(data=as.data.frame(centroids), aes(x=myCol_01, y=myCol_02, color=clusterAssignment), size=6, pch=13) +
-    scale_color_continuous(breaks = c(1:myClusterNum)) +
-    theme_classic()
-}
-
-'''
-if(n == 2){
+if(m == 2){
   #### initial sanity check plot 
   ggplot(myScatterInput) + geom_point(aes(x=V1, y=V2)) + theme_classic()
 }
 
-if(n == 2){
+if(m == 2){
   ## plot by cluster assignment
   ggplot(myScatterInput) + geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) +
     scale_color_continuous(breaks = c(1:myClusterNum)) +
     theme_classic()
 }
-'''
+
+
+
+
