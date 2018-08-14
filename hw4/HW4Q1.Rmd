@@ -1,0 +1,89 @@
+---
+title: "HW4"
+author: "Louise Lai"
+date: "August 13, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(dplyr)
+library(magrittr)
+```
+
+# Edge Case Implementation Choices:
+- When a number/roman numeral is in the last position, delete it
+- When there's only one name (i.e. no last name), use it as both the first and last name
+
+## Handles:
+- All explicit specifications from homework
+- 1st, 2nd, 3rd, 4th, 1ST, 2ND, 3RD, 4TH, 200000th etc.
+- NAMES IN ALL CAPS
+
+## Fails when:
+- When last name is similar to a roman numeral, e.g. "Louise Ying She LAI". The program intprets the last name as a roman numeral and deletes it.
+- When the name contains a number, but the number is not in the last position e.g. "Victoria 2nd Smith". The program does not properly locate number. Instead, it just deletes the last word.
+
+```{r}
+
+nameChanger <- function(name){
+  
+  nameSplit <-  unlist(strsplit(name, "\\s+")) # split with at least one space
+  # 1) Non-conforming inputs
+  
+   # case: name too long
+  if(length(nameSplit) > 2){
+    message("input non-conforming! (name > 2)")
+  } 
+  
+   # case: numbers and/or roman numerals
+  edgeCaseRegex <- "(^\\d+[(st)|(nd)|(rd)|(th)|(ST)|(ND)|(RD)|(TH)]*$)|(XC|XL|L?X{0,3})(IX|IV|V?I{1,3})$"
+  if(sum(!is.na(str_extract(nameSplit, edgeCaseRegex))) > 0){
+    # delete the word. Only works if number is at the end, and there is one. 
+    nameSplit <- nameSplit[-length(nameSplit)]
+    message("input non-conforming! (numbers/roman numerals)")
+  }
+
+  # 2) Charts
+  firstChart <- unlist(strsplit("Stinky Lumpy Buttercup Gidget Crusty Greasy Fluffy Cheeseball Chim.Chim Poopsie Flunky Booger Pinky Zippy Goober Doofus Slimy Loopy Snotty Falafel Dorky Squeezeit Oprah Skipper Dinky Zsa-Zsa", " "))
+  secondChart <- unlist(strsplit("Diaper Toilet Giggle Bubble Girdle Barf Lizard Waffle Cootie Monkey Potty Liver Banana Rhino Burger Hamster Toad Gizzard Pizza Gerbil Chicken Pickle Chuckle Tofu Gorilla Stinker", " "))
+  thirdChart <- unlist(strsplit("head mouth face nose tush breath pants shorts lips honker butt brain tushie chunks hiney biscuits toes buns fanny sniffer spinkles kisser squirt humperdinck brains juice", " "))
+  
+  # 3) Create Dictionary
+  
+  # get names
+  firstName <- tolower(nameSplit[1])
+  lastName <- tolower(nameSplit[length(nameSplit)])
+
+  # get letters as values
+  firstLetter <- str_match(firstName, "[a-z]")
+  secondLetter <- str_match(lastName, "[a-z]")
+  thirdLetter <- str_match(stringi::stri_reverse(lastName), "[a-z]")
+  
+  # this error should never happen, but just in case truly weird input occurs
+  if(is.na(firstLetter) | is.na(secondLetter) | is.na(thirdLetter)){
+    message("input non-conforming! Super weird! Aargh!\n") 
+  }
+  
+  # assign keys
+  names(firstChart) <- letters[1:26]
+  names(secondChart) <- letters[1:26]
+  names(thirdChart) <- letters[1:26]
+
+  # 4) Match and Return
+  print(paste(name, " -> ", firstName, lastName)) # previous 
+  print(paste(firstChart[firstLetter], paste(secondChart[secondLetter], thirdChart[thirdLetter], sep=""))) # new
+  print("- - - - - - - -") # purely aesthetic, for output
+}
+
+names <- c("Louise Lai", "Louise Ying She Lai", "Paul Intrevado", "David Uminsky", "Terence Parr", "Jeff Hamrick",
+           "paul intrevado", "Intrevado, Paul", "Intrevad0 Paul", "Queen Elizabeth II", 
+           "Queen Elizabeth 2nd", "Queen Elizabeth 20000TH", "John Paul Euclid Rumpel", "britishDudeThatSitsInTheBackOfTheClass")
+
+sapply(c("Louise Lai", "Louise Ying She Lai", "Paul Intrevado", "David Uminsky", "Terence Parr", "Jeff Hamrick",
+           "paul intrevado", "Intrevado, Paul", "Intrevad0 Paul", "Queen Elizabeth II", 
+           "Queen Elizabeth 2nd", "Queen Elizabeth 20000TH", "John Paul Euclid Rumpel", "britishDudeThatSitsInTheBackOfTheClass"), nameChanger)
+```
+
+
