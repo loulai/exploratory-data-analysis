@@ -1,6 +1,7 @@
 library(dplyr)
 library(magrittr)
 library(ggplot2)
+library(pdist)
 
 
 ############
@@ -60,7 +61,7 @@ start.time <- Sys.time()
 points <- myScatterInput # this is more like a safety check so I can always go back to myScatterInput
 n <- nrow(myScatterInput) # n = num vectors
 m <- ncol(myScatterInput) # m = dimensions
-  
+
 # 1) random assignment
 points <- points %>% 
   mutate(clusterAssignment = rep_len(1:myClusterNum, n))
@@ -71,39 +72,30 @@ while(swapped == T){
   # 2) compute centroids
   centroids <- c()
   for(i in 1:myClusterNum){
-    centroids <- rbind(centroids, points %>% 
+    centroids <- as.data.frame(rbind(centroids, points %>% 
                          filter(clusterAssignment == i) %>% 
-                         colMeans())
+                         colMeans()))
   }
   
   # 3) distance from each data point to centriod 
-  # by rbinding the centriods to dataframe of points, the dist() function can be used
-  pointsCentroids <- rbind(points, centroids)
-  distanceMatrix <- as.data.frame(as.matrix(dist(pointsCentroids[1:(n+myClusterNum), m]))) # slice: go for all vectors + centriods, but only dim times (exclude group assignment)
-  #test <- as.data.frame(as.matrix(dist(pointsCentroids[1:12, 1])))
-  distanceMatrix
-  
-  # 4a) calculate closest centriod
+  # we use the pdist package, which is like the dist package without the unnecessary computations
+  # n = rows
   newClusters <- c()
   for(i in 1:n){
-    newClusters[i] <- which.min(distanceMatrix[[i]][(n+1):(n+myClusterNum)]) # this is honestly amazingly simple
-    # the beauty is that i is set to iterate over only n vectors, so it auto ignores the last (two) cluster matrices
-    # then, the subsetting of the final rows (7:8) can be dynamic.
+    distPointCentriods <- pdist(X = centroids[1:m], Y=points[i, 1:m]) # targets=centriods, query=point.
+    newClusters[i] <- which.min(distPointCentriods@dist) # we target centriod is the min dist between query and all points in target
   }
   newClusters
-  
-  # remove centriods from pointsCentriods
-  pointsCentroids <- slice(pointsCentroids, -(n+1):-(n+myClusterNum))
   
   # 4b) assign to centroid
   swapped = F
   for(i in 1:n){
     if(!points['clusterAssignment'][[1]][i] == newClusters[i]) { # use the column called 'clusterAssignment' to compare with newClusters
-      print("swap")
+      #print("swap")
       points['clusterAssignment'][[1]][i] = newClusters[i]
       swapped = T # repeat until this will not be reset 
     } else {
-      print("noswap")
+      #print("noswap")
     }
   }
   print(swapped)
@@ -132,7 +124,7 @@ if(n == 2){
 
 if(n == 2){
   ## plot by cluster assignment
-  ggplot(points) + geom_point(aes(x=V1, y=V2, color=clusterAssignment)) +
+  ggplot(points) + geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) +
     scale_color_continuous(breaks = c(1:myClusterNum)) +
     theme_classic()
 }
