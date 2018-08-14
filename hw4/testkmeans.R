@@ -141,3 +141,10 @@ a=rnorm(10, 0, 10)
 b=rnorm(10, 0, 10)
 
 dist(as.data.frame(a))
+
+swapped = F
+if(!identical(points['clusterAssignment'][[1]], newClusters)){ # if previous clusters don't equal new clusters, swap and indicate swap occured
+  points['clusterAssignment'] = newClusters
+  swapped=T
+}
+print(swapped)

@@ -18,6 +18,7 @@ myClusterNum <- 4
 # TEST DATA 3
 set.seed(103)
 myScatterInput <- data_frame(myCol_01 = runif(10000, -5, 20), myCol_02 = c(rnorm(3000, 20, 5), rnorm(5000, -4, 2), rnorm(2000, 40, 2)))
+myScatterInput <- myScatterInput[1:100,]
 myClusterNum <- 3
 
 # TEST DATA 4
@@ -89,14 +90,9 @@ while(swapped == T){
   
   # 4b) assign to centroid
   swapped = F
-  for(i in 1:n){
-    if(!points['clusterAssignment'][[1]][i] == newClusters[i]) { # use the column called 'clusterAssignment' to compare with newClusters
-      #print("swap")
-      points['clusterAssignment'][[1]][i] = newClusters[i]
-      swapped = T # repeat until this will not be reset 
-    } else {
-      #print("noswap")
-    }
+  if(!identical(points['clusterAssignment'][[1]], newClusters)){ # if previous clusters don't equal new clusters, swap and indicate swap occured
+    points['clusterAssignment'] = newClusters
+    swapped=T
   }
   print(swapped)
 }
@@ -129,7 +125,5 @@ if(n == 2){
     theme_classic()
 }
 '''
-a=rnorm(10, 0, 10)
-b=rnorm(10, 0, 10)
-
-dist(as.data.frame(a))
+# 1.4413 mins for entire test 3s
+# 48 .099 sec for 100 rows of test 3
