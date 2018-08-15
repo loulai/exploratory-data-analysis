@@ -8,8 +8,8 @@ library(microbenchmark)
 
 # TEST DATA 3
 set.seed(103)
-myScatterInput <- data_frame(myCol_01 = runif(10000, -5, 20), 
-                             myCol_02 = c(rnorm(3000, 20, 5), rnorm(5000, -4, 2), rnorm(2000, 40, 2)))
+myScatterInput <- as.matrix(data_frame(myCol_01 = runif(10000, -5, 20), 
+                             myCol_02 = c(rnorm(3000, 20, 5), rnorm(5000, -4, 2), rnorm(2000, 40, 2))))
 #myScatterInput <- myScatterInput[1:100,]
 myClusterNum <- 3
 
@@ -17,7 +17,7 @@ myClusterNum <- 3
 set.seed(104)
 myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2), rnorm(2000, 40, 2)), 
                              myCol_02 = runif(10000, -5, 20))
-myScatterInput <- as.matrix(myScatterInput[1:10,])
+myScatterInput <- as.matrix(myScatterInput[1:10000,])
 myClusterNum <- 2
 View(myScatterInput)
 
