@@ -1,8 +1,6 @@
 library(dplyr)
 library(magrittr)
 library(ggplot2)
-install.packages("rdist")
-library(pdist)
 library(rdist)
 library(microbenchmark)
 
@@ -72,12 +70,10 @@ myKMeans <- function(myScatterInputOriginal, myClusterNum, numIter){
       # 2) compute centriods
       centroids <- matrix(data=NA, nrow=myClusterNum, ncol=m)
       if(m > 1){ # this is due to some funky subsetting thing
-        centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:(m+1)]) # ideally, pass parameter to remove the initial grouping
+        centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:(m+1)]) 
       } else {
         centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:2]) 
       }
-      
-      #  dplyr - summarise_all(funs(mean))
       
       myClusterNum <- nrow(centroids) # this is here in case empty clusters arise, we need to change number of centroids
       
@@ -85,11 +81,9 @@ myKMeans <- function(myScatterInputOriginal, myClusterNum, numIter){
       # we use the wonderful cdist package, which calculates difference between two matrices
       newClusters <- vector(mode="double", length=n)
       for(i in 1:n){
-        distPointCentroids <- rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=myScatterInput[i, 1:m, drop=F]) # targets=centriods, query=point
-        newClusters[i] <- which.min(distPointCentroids) # we target centriod is the min dist between query and all points in target
+        distPointCentroids <- rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=myScatterInput[i, 1:m, drop=F]) # X=centriods, Y=one point
+        newClusters[i] <- which.min(distPointCentroids) # the target centriod is the one with min dist
       }
-      
-      #is.atomic(newClusters) # yass bitch still a vector
       
       # 4) assign to centroid
       swapped = F
@@ -108,7 +102,12 @@ myKMeans <- function(myScatterInputOriginal, myClusterNum, numIter){
     newTotalDistances <- sum(distances)
   }
   
-  # 6) if 2D, plot
+  # 6) assign lowest distance
+  if(newTotalDistances < totalDistances){
+    totalDistances <- newTotalDistances
+  }
+  
+  # 7) if 2D, plot
   if(m==2){
     print(ggplot(as.data.frame(myScatterInput)) + 
             geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) + 
@@ -117,10 +116,7 @@ myKMeans <- function(myScatterInputOriginal, myClusterNum, numIter){
             theme_classic())
   }
   
-  # 7) assign lowest distance
-  if(newTotalDistances < totalDistances){
-    totalDistances <- newTotalDistances
-  }
+  # finally, return sum of total distances
   return(totalDistances)
 }
 
