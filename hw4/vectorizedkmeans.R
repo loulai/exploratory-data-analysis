@@ -11,7 +11,6 @@ set.seed(101)
 myScatterInput <- data_frame(myCol_01 = runif(100000, -1, 1))
 myClusterNum <- 2
 
-
 # TEST DATA 2
 set.seed(102)
 myScatterInput <- data_frame(myCol_01 = runif(100000, -1, 1))
@@ -39,7 +38,7 @@ myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2
                              myCol_08 = rnorm(10000, 30, 2))
 myClusterNum <- 3
 
-# TEST DATA 5
+# TEST DATA 6
 set.seed(106)
 myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2), rnorm(2000, 40, 2)), 
                              myCol_02 = runif(10000, -5, 20),
@@ -52,35 +51,40 @@ myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2
 myClusterNum <- 12
 
 
-
 #############
 
+myScatterInput <- myScatterInput[1:100,]
+View(myScatterInput)
+
 myKMeans <- function(myScatterInput, myClusterNum){
-  n <- nrow(myScatterInput) # n = num vectors
+  myScatterInput <- as.matrix(myScatterInput)
+  n <- nrow(myScatterInput) # n = rows
   m <- ncol(myScatterInput) # m = dimensions
   
   #1) random assignment
   myScatterInput <- cbind(myScatterInput, clusterAssignment=rep_len(1:myClusterNum, n))
   #class(myScatterInput)
+  #View(myScatterInput)
 
   swapped = T
   while(swapped == T){
     
     # 2) compute centriods
-    centroids <- rep(NA, myClusterNum)
-    centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:(m+1)]) # ideally, pass parameter to remove the initial grouping
-    #View(centroids)
-              
-    # 3) distance from each data point to centriod 
-    # we use the pdist package, which is like the dist package without the unnecessary computations
-    newClusters <- rep(NA, n)
-    newClusters <- vector(mode="double", length=n)
-    for(i in 1:n){
-      distPointCentroids <- pdist(X = centroids[1:m,], Y=myScatterInput[i, 1:m]) # targets=centriods, query=point.
-      newClusters[i] <- which.min(distPointCentroids@dist) # we target centriod is the min dist between query and all points in target
-      # convert to double for comparison later
+    if(m > 1){ # this is due to some funky subsetting thing
+      centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:(m+1)]) # ideally, pass parameter to remove the initial grouping
+    } else {
+      centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:2]) # ideally, pass parameter to remove the initial grouping
     }
     
+    # 3) distance from each data point to centriod 
+    # we use the pdist package, which is like the dist package without the unnecessary computations
+    newClusters <- vector(mode="double", length=n)
+    for(i in 1:n){
+      distPointCentroids <- pdist(X = as.matrix(centroids[1:myClusterNum,]), Y=myScatterInput[i, 1:m]) # targets=centriods, query=point
+      newClusters[i] <- which.min(distPointCentroids@dist) # we target centriod is the min dist between query and all points in target
+    }
+    
+   
     #is.atomic(newClusters) # yass bitch still a vector
     
     # 4) assign to centroid
@@ -92,7 +96,7 @@ myKMeans <- function(myScatterInput, myClusterNum){
     }
   }
   
-  # 5) plot
+  # 5) plot, if possible
   if(m==2){
     print(ggplot(as.data.frame(myScatterInput)) + 
             geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) + 
@@ -100,6 +104,7 @@ myKMeans <- function(myScatterInput, myClusterNum){
             scale_color_continuous(breaks = c(1:myClusterNum)) +
             theme_classic())
   }
+
 }
 
 # timing
@@ -107,18 +112,12 @@ microbenchmark(myFunc=myKMeans(myScatterInput, myClusterNum), times=1)
 
 ##########
 
-# points
-if(m == 2){
-  ggplot(myScatterInput) + geom_point(aes(x=V1, y=V2)) + theme_classic()
-}
-
-# points + randomized assignment
-if(m == 2){
-  ggplot(myScatterInput) + geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) +
-    scale_color_continuous(breaks = c(1:myClusterNum)) +
-    theme_classic()
-}
 
 
 
-
+'''
+    as.matrix(centroids[1:myClusterNum,])
+    centroids
+    myScatterInput[1, 1:m]
+    pdist(X = as.matrix(centroids[1:myClusterNum,]), Y=myScatterInput[1, 1:m])@dist
+    '''
