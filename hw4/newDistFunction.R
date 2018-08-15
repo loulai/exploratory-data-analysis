@@ -1,7 +1,9 @@
 library(dplyr)
 library(magrittr)
 library(ggplot2)
+install.packages("rdist")
 library(pdist)
+library(rdist)
 library(microbenchmark)
 
 ############
@@ -52,7 +54,7 @@ myClusterNum <- 12
 
 
 #############
-#myScatterInput <- myScatterInput[1:10000,]
+myScatterInput <- myScatterInput[1:1000,]
 myKMeans <- function(myScatterInput, myClusterNum){
   print("hello?")
   myScatterInput <- as.matrix(myScatterInput)
@@ -63,11 +65,11 @@ myKMeans <- function(myScatterInput, myClusterNum){
   myScatterInput <- cbind(myScatterInput, clusterAssignment=rep_len(1:myClusterNum, n))
   #class(myScatterInput)
   #View(myScatterInput)
-
+  
   swapped = T
   while(swapped == T){
     print("in while")
-
+    
     # 2) compute centriods
     centroids <- c()
     if(m > 1){ # this is due to some funky subsetting thing
@@ -75,19 +77,19 @@ myKMeans <- function(myScatterInput, myClusterNum){
     } else {
       centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:2]) 
     }
-
+    
     myClusterNum <- nrow(centroids) # this is here in case empty clusters arise, we need to change number of centroids
-   
+    
     # 3) distance from each data point to centriod 
     # we use the pdist package, which is like the dist package without the unnecessary computations
     newClusters <- vector(mode="double", length=n)
     for(i in 1:n){
-      distPointCentroids <- pdist(X = as.matrix(centroids[1:myClusterNum,]), Y=myScatterInput[i, 1:m]) # targets=centriods, query=point
-      newClusters[i] <- which.min(distPointCentroids@dist) # we target centriod is the min dist between query and all points in target
+      distPointCentroids <- rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=myScatterInput[i, 1:m, drop=F]) # targets=centriods, query=point
+      newClusters[i] <- which.min(distPointCentroids) # we target centriod is the min dist between query and all points in target
     }
-
+   
     #is.atomic(newClusters) # yass bitch still a vector
-
+    
     # 4) assign to centroid
     swapped = F
     #class(myScatterInput)
@@ -118,4 +120,19 @@ microbenchmark(myFunc=myKMeans(myScatterInput, myClusterNum), times=1)
     centroids
     myScatterInput[1, 1:m]
     pdist(X = as.matrix(centroids[1:myClusterNum,]), Y=myScatterInput[1, 1:m])@dist
-    '''
+   
+ X = centroids[1:myClusterNum,,drop=F]
+    Y=myScatterInput[1, 1:m, drop=F]
+    rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=myScatterInput[1, 1:m, drop=F])
+    distPointCentroids <- rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=myScatterInput[1, 1:m, drop=F]) 
+    which.min(distPointCentroids)
+    ncol(myScatterInput[1, 1:2])
+    View(myScatterInput)
+    myScatterInput[1, 1:2]
+    centroids[1:3,]
+    cdist
+    is.matrix(centroids[1:myClusterNum,, drop=F])
+    is.matrix(myScatterInput[2, 1:m, drop=F])
+
+'''
+
