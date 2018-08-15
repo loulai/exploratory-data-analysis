@@ -4,7 +4,6 @@ library(ggplot2)
 library(pdist)
 library(microbenchmark)
 
-
 ############
 # TEST DATA 1
 set.seed(101)
@@ -24,7 +23,9 @@ myClusterNum <- 3
 
 # TEST DATA 4
 set.seed(104)
-myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2), rnorm(2000, 40, 2)), myCol_02 = runif(10000, -5, 20))
+myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2), rnorm(2000, 40, 2)), 
+                             myCol_02 = runif(10000, -5, 20))
+myScatterInput <- myScatterInput[1:1000,]
 myClusterNum <- 6
 
 # TEST DATA 5
@@ -77,10 +78,12 @@ myKMeans <- function(myScatterInput, myClusterNum){
     # n = rows
     newClusters <- c()
     for(i in 1:n){
-      distPointCentriods <- pdist(X = centroids[1:m], Y=myScatterInput[i, 1:m]) # targets=centriods, query=point.
-      newClusters[i] <- which.min(distPointCentriods@dist) # we target centriod is the min dist between query and all points in target
+      distPointCentriods <- pdist(X = centroids[1:m,], Y=myScatterInput[i, 1:m]) # targets=centriods, query=point.
+      newClusters[1] <- which.min(distPointCentriods@dist) # we target centriod is the min dist between query and all points in target
     }
     newClusters
+    pdist(X = centroids[1:m,], Y=myScatterInput[10, 1:m])
+    which.min(pdist(X = centroids[1:m,], Y=myScatterInput[10, 1:m])@dist)
     
     # 4b) assign to centroid
     swapped = F
@@ -106,13 +109,13 @@ microbenchmark(myFunc=myKMeans(myScatterInput, myClusterNum), times=1)
 
 ##########
 
+# points
 if(m == 2){
-  #### initial sanity check plot 
   ggplot(myScatterInput) + geom_point(aes(x=V1, y=V2)) + theme_classic()
 }
 
+# points + randomized assignment
 if(m == 2){
-  ## plot by cluster assignment
   ggplot(myScatterInput) + geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) +
     scale_color_continuous(breaks = c(1:myClusterNum)) +
     theme_classic()
