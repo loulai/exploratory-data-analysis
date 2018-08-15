@@ -19,7 +19,7 @@ myClusterNum <- 4
 # TEST DATA 3
 set.seed(103)
 myScatterInput <- data_frame(myCol_01 = runif(10000, -5, 20), myCol_02 = c(rnorm(3000, 20, 5), rnorm(5000, -4, 2), rnorm(2000, 40, 2)))
-myClusterNum <- 3
+myClusterNum <- 6
 
 # TEST DATA 4
 set.seed(104)
@@ -52,11 +52,9 @@ myClusterNum <- 12
 
 
 #############
-
 myScatterInput <- myScatterInput[1:100,]
-View(myScatterInput)
-
 myKMeans <- function(myScatterInput, myClusterNum){
+  print("hello?")
   myScatterInput <- as.matrix(myScatterInput)
   n <- nrow(myScatterInput) # n = rows
   m <- ncol(myScatterInput) # m = dimensions
@@ -67,26 +65,30 @@ myKMeans <- function(myScatterInput, myClusterNum){
   #View(myScatterInput)
 
   swapped = T
+  count = 1
   while(swapped == T){
-    
+    print("in while")
+
     # 2) compute centriods
+    centroids <- c()
     if(m > 1){ # this is due to some funky subsetting thing
       centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:(m+1)]) # ideally, pass parameter to remove the initial grouping
     } else {
       centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:2]) # ideally, pass parameter to remove the initial grouping
     }
-    
+    if(print(nrow(centroids)))
+    #centroids
     # 3) distance from each data point to centriod 
     # we use the pdist package, which is like the dist package without the unnecessary computations
     newClusters <- vector(mode="double", length=n)
     for(i in 1:n){
+      print("in pdist calc")
       distPointCentroids <- pdist(X = as.matrix(centroids[1:myClusterNum,]), Y=myScatterInput[i, 1:m]) # targets=centriods, query=point
       newClusters[i] <- which.min(distPointCentroids@dist) # we target centriod is the min dist between query and all points in target
     }
-    
-   
+
     #is.atomic(newClusters) # yass bitch still a vector
-    
+
     # 4) assign to centroid
     swapped = F
     #class(myScatterInput)
@@ -94,6 +96,7 @@ myKMeans <- function(myScatterInput, myClusterNum){
       myScatterInput[,'clusterAssignment'] = newClusters
       swapped=T
     }
+    #View(myScatterInput)
   }
   
   # 5) plot, if possible
@@ -105,6 +108,8 @@ myKMeans <- function(myScatterInput, myClusterNum){
             theme_classic())
   }
 
+  print(count)
+  count=count+1
 }
 
 # timing
