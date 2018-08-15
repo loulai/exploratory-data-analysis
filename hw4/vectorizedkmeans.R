@@ -43,13 +43,12 @@ myKMeans <- function(myScatterInput, myClusterNum){
     # 3) distance from each data point to centriod 
     # we use the pdist package, which is like the dist package without the unnecessary computations
     newClusters <- rep(NA, n)
+    newClusters <- vector(mode="double", length=n)
     for(i in 1:n){
       distPointCentroids <- pdist(X = centroids[1:m,], Y=myScatterInput[i, 1:m]) # targets=centriods, query=point.
       newClusters[i] <- which.min(distPointCentroids@dist) # we target centriod is the min dist between query and all points in target
+      # convert to double for comparison later
     }
-    #View(newClusters)
-    #pdist(X = centroids[1:m,], Y=myScatterInput[10, 1:m])
-    #which.min(pdist(X = centroids[1:m,], Y=myScatterInput[10, 1:m])@dist)
     
     #is.atomic(newClusters) # yass bitch still a vector
     
@@ -60,7 +59,6 @@ myKMeans <- function(myScatterInput, myClusterNum){
       myScatterInput[,'clusterAssignment'] = newClusters
       swapped=T
     }
-    print(swapped)
   }
   
   # 5) plot
