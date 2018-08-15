@@ -6,20 +6,51 @@ library(microbenchmark)
 
 ############
 
+# TEST DATA 1
+set.seed(101)
+myScatterInput <- data_frame(myCol_01 = runif(100000, -1, 1))
+myClusterNum <- 2
+
+
+# TEST DATA 2
+set.seed(102)
+myScatterInput <- data_frame(myCol_01 = runif(100000, -1, 1))
+myClusterNum <- 4
+
 # TEST DATA 3
 set.seed(103)
-myScatterInput <- as.matrix(data_frame(myCol_01 = runif(10000, -5, 20), 
-                             myCol_02 = c(rnorm(3000, 20, 5), rnorm(5000, -4, 2), rnorm(2000, 40, 2))))
-#myScatterInput <- myScatterInput[1:100,]
+myScatterInput <- data_frame(myCol_01 = runif(10000, -5, 20), myCol_02 = c(rnorm(3000, 20, 5), rnorm(5000, -4, 2), rnorm(2000, 40, 2)))
 myClusterNum <- 3
 
 # TEST DATA 4
 set.seed(104)
+myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2), rnorm(2000, 40, 2)), myCol_02 = runif(10000, -5, 20))
+myClusterNum <- 6
+
+# TEST DATA 5
+set.seed(105)
 myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2), rnorm(2000, 40, 2)), 
-                             myCol_02 = runif(10000, -5, 20))
-myScatterInput <- as.matrix(myScatterInput[1:10000,])
-myClusterNum <- 2
-View(myScatterInput)
+                             myCol_02 = runif(10000, -5, 20),
+                             myCol_03 = runif(10000, -100, 100),
+                             myCol_04 = c(runif(4000, -5, 20), rnorm(6000)),
+                             myCol_05 = runif(10000, -10, 200),
+                             myCol_06 = rnorm(10000, -300, 1000),
+                             myCol_07 = rnorm(10000, -1000000, 1000000),
+                             myCol_08 = rnorm(10000, 30, 2))
+myClusterNum <- 3
+
+# TEST DATA 5
+set.seed(106)
+myScatterInput <- data_frame(myCol_01 = c(rnorm(3000, 20, 20), rnorm(5000, -4, 2), rnorm(2000, 40, 2)), 
+                             myCol_02 = runif(10000, -5, 20),
+                             myCol_03 = runif(10000, -100, 100),
+                             myCol_04 = c(runif(4000, -5, 20), rnorm(6000)),
+                             myCol_05 = runif(10000, -10, 200),
+                             myCol_06 = rnorm(10000, -300, 1000),
+                             myCol_07 = rnorm(10000, -1000000, 1000000),
+                             myCol_08 = rnorm(10000, 30, 2))
+myClusterNum <- 12
+
 
 
 #############
