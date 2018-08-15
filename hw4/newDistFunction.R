@@ -54,53 +54,61 @@ myClusterNum <- 12
 
 
 #############
-myScatterInput <- myScatterInput[1:1000,]
-myKMeans <- function(myScatterInput, myClusterNum){
-  print("hello?")
-  myScatterInput <- as.matrix(myScatterInput)
-  n <- nrow(myScatterInput) # n = rows
-  m <- ncol(myScatterInput) # m = dimensions
+#myScatterInput <- myScatterInput[1:1000,]
+
+myKMeans <- function(myScatterInputOriginal, myClusterNum, numIter){
+  totalDistances <- Inf
   
-  #1) random assignment
-  myScatterInput <- cbind(myScatterInput, clusterAssignment=rep_len(1:myClusterNum, n))
-  #class(myScatterInput)
-  #View(myScatterInput)
-  
-  swapped = T
-  while(swapped == T){
-    print("in while")
+  for(i in 1:numIter){
+    myScatterInput <- as.matrix(myScatterInputOriginal)
+    n <- nrow(myScatterInput) # n = rows
+    m <- ncol(myScatterInput) # m = dimensions
     
-    # 2) compute centriods
-    centroids <- c()
-    if(m > 1){ # this is due to some funky subsetting thing
-      centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:(m+1)]) # ideally, pass parameter to remove the initial grouping
-    } else {
-      centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:2]) 
+    # 1) random assignment
+    myScatterInput <- cbind(myScatterInput, clusterAssignment=rep_len(1:myClusterNum, n))
+    
+    swapped = T
+    while(swapped == T){
+      # 2) compute centriods
+      centroids <- matrix(data=NA, nrow=myClusterNum, ncol=m)
+      if(m > 1){ # this is due to some funky subsetting thing
+        centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:(m+1)]) # ideally, pass parameter to remove the initial grouping
+      } else {
+        centroids <- as.matrix(aggregate(list(myScatterInput), by=list(myScatterInput[,'clusterAssignment']), FUN=mean)[2:2]) 
+      }
+      
+      #  dplyr - summarise_all(funs(mean))
+      
+      myClusterNum <- nrow(centroids) # this is here in case empty clusters arise, we need to change number of centroids
+      
+      # 3) distance from each data point to centriod 
+      # we use the wonderful cdist package, which calculates difference between two matrices
+      newClusters <- vector(mode="double", length=n)
+      for(i in 1:n){
+        distPointCentroids <- rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=myScatterInput[i, 1:m, drop=F]) # targets=centriods, query=point
+        newClusters[i] <- which.min(distPointCentroids) # we target centriod is the min dist between query and all points in target
+      }
+      
+      #is.atomic(newClusters) # yass bitch still a vector
+      
+      # 4) assign to centroid
+      swapped = F
+      if(!identical(myScatterInput[,'clusterAssignment'], newClusters)){ # if previous clusters don't equal new clusters, swap and indicate swap occured
+        myScatterInput[,'clusterAssignment'] = newClusters
+        swapped=T
+      }
     }
     
-    myClusterNum <- nrow(centroids) # this is here in case empty clusters arise, we need to change number of centroids
-    
-    # 3) distance from each data point to centriod 
-    # we use the pdist package, which is like the dist package without the unnecessary computations
-    newClusters <- vector(mode="double", length=n)
-    for(i in 1:n){
-      distPointCentroids <- rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=myScatterInput[i, 1:m, drop=F]) # targets=centriods, query=point
-      newClusters[i] <- which.min(distPointCentroids) # we target centriod is the min dist between query and all points in target
+    # 5) get sum of distances
+    distances <- vector(mode="double", length=myClusterNum)
+    for(i in 1:myClusterNum){
+      clusterOfPoints <- as.data.frame(myScatterInput) %>% filter(clusterAssignment == i) %>% select(-clusterAssignment)
+      distances[i] <- sum(rdist::cdist(X = centroids[1:myClusterNum,,drop=F], Y=as.matrix(clusterOfPoints)))
     }
-   
-    #is.atomic(newClusters) # yass bitch still a vector
-    
-    # 4) assign to centroid
-    swapped = F
-    #class(myScatterInput)
-    if(!identical(myScatterInput[,'clusterAssignment'], newClusters)){ # if previous clusters don't equal new clusters, swap and indicate swap occured
-      myScatterInput[,'clusterAssignment'] = newClusters
-      swapped=T
-    }
-    #View(myScatterInput)
+    newTotalDistances <- sum(distances)
   }
   
-  # 5) if 2D, plot
+  # 6) if 2D, plot
   if(m==2){
     print(ggplot(as.data.frame(myScatterInput)) + 
             geom_point(aes(x=myCol_01, y=myCol_02, color=clusterAssignment)) + 
@@ -108,10 +116,19 @@ myKMeans <- function(myScatterInput, myClusterNum){
             scale_color_continuous(breaks = c(1:myClusterNum)) +
             theme_classic())
   }
+  
+  # 7) assign lowest distance
+  if(newTotalDistances < totalDistances){
+    totalDistances <- newTotalDistances
+  }
+  return(totalDistances)
 }
 
+
 # timing
-microbenchmark(myFunc=myKMeans(myScatterInput, myClusterNum), times=1)
+microbenchmark(myFunc=myKMeans(myScatterInput, myClusterNum, 2), times=1)
+
+myKMeans(myScatterInput, myClusterNum, 2)
 
 ##########
 
